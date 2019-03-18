@@ -2,6 +2,7 @@ use crate::geom::Point;
 use std::cmp::{max, min};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
+use rand::Rng;
 
 pub struct Puzzle {
     x_mm: f32,
@@ -30,8 +31,10 @@ impl Puzzle {
             edges: HashMap::default(),
         };
 
-        puzzle.gen_vertices();
-        puzzle.gen_edges();
+        let mut rng = rand::thread_rng();
+
+        puzzle.gen_vertices(&rng);
+        puzzle.gen_edges(&mut rng);
 
         assert_eq!(
             (puzzle.x_pieces + 1) * (puzzle.y_pieces + 1),
@@ -49,7 +52,7 @@ impl Puzzle {
         vi.row * (self.x_pieces + 1) + vi.col
     }
 
-    fn gen_vertices(&mut self) {
+    fn gen_vertices<R>(&mut self, rng: &R) where R:rand::Rng {
         assert!(self.vertices.is_empty());
 
         let piece_width = self.x_mm / self.x_pieces as f32;
@@ -67,7 +70,7 @@ impl Puzzle {
         }
     }
 
-    fn gen_edges(&mut self) {
+    fn gen_edges<R>(&mut self, rng: &mut R) where R:rand::Rng {
         assert!(self.edges.is_empty());
         assert!(!self.vertices.is_empty());
 
@@ -88,7 +91,7 @@ impl Puzzle {
                 .filter(|vi| !done.contains(vi))
             {
                 todo.insert(neighbor);
-                self.add_edge(current, neighbor);
+                self.add_edge(rng, current, neighbor);
             }
 
             let inserted = done.insert(current);
@@ -96,14 +99,14 @@ impl Puzzle {
         }
     }
 
-    fn add_edge(&mut self, vi1: VertexIndex, vi2: VertexIndex) {
+    fn add_edge<R>(&mut self, rng: &mut R, vi1: VertexIndex, vi2: VertexIndex) where R: rand::Rng {
         let v1 = min(vi1, vi2);
         let v2 = max(vi1, vi2);
 
         let is_along_edge = self.is_edge_vertex(vi1) && self.is_edge_vertex(vi2);
         let edge = match is_along_edge {
             true => Edge::Bumpless,
-            false => Edge::Bumpy,
+            false => Edge::Bumpy(rng.gen()),
         };
         self.edges.insert((v1, v2), edge);
     }
@@ -163,10 +166,49 @@ impl Puzzle {
 
     fn edge_svg(&self, vi1: &Point, vi2: &Point, e: &Edge) -> String {
         match e {
-            Edge::Bumpless =>  format!(r#"M {} {} L {} {}"#, vi1.x(), vi1.y(), vi2.x(), vi2.y()),
-            Edge::Bumpy => format!(r#"M {} {} L {} {}"#, vi1.x(), vi1.y(), vi2.x(), vi2.y()),
+            Edge::Bumpless => format!(r#"M {} {} L {} {}"#, vi1.x(), vi1.y(), vi2.x(), vi2.y()),
+            Edge::Bumpy(_) => {
+                let one_third_x = (vi2.x() - vi1.x()) / 3.0;
+                let one_third_y = (vi2.y() - vi1.y()) / 3.0;
+                let one_fifth_x = (vi2.y() - vi1.y()) / 5.0;
+                let one_fifth_y = (vi2.x() - vi1.x()) / 5.0;
+                if one_third_x == 0.0 {
+                    // vertical
+                    format!(
+                        r#"M {} {} L {} {} L {} {} L {} {} L {} {} L {} {}"#,
+                        vi1.x(),
+                        vi1.y(),
+                        vi1.x(),
+                        vi1.y() + one_third_y,
+                        vi1.x() + one_fifth_x * e.polarity_factor(),
+                        vi1.y() + one_third_y,
+                        vi1.x() + one_fifth_x * e.polarity_factor(),
+                        vi1.y() + 2.0 * one_third_y,
+                        vi1.x(),
+                        vi1.y() + 2.0 * one_third_y,
+                        vi2.x(),
+                        vi2.y()
+                    )
+                } else {
+                    format!(
+                        r#"M {} {} L {} {} L {} {} L {} {} L {} {} L {} {}"#,
+                        vi1.x(),
+                        vi1.y(),
+                        vi1.x() + one_third_x,
+                        vi1.y(),
+                        vi1.x() + one_third_x,
+                        vi1.y() + one_fifth_y * e.polarity_factor(),
+                        vi1.x() + 2.0 * one_third_x,
+                        vi1.y() + one_fifth_y * e.polarity_factor(),
+                        vi1.x() + 2.0 * one_third_x,
+                        vi1.y(),
+                        vi2.x(),
+                        vi2.y(),
+                    )
+                }
+                //                format!(r#"M {} {} L {} {}"#, vi1.x(), vi1.y(), vi2.x(), vi2.y())
+            }
         }
-
     }
 }
 
@@ -215,5 +257,26 @@ impl VertexIndex {
 #[derive(Debug)]
 enum Edge {
     Bumpless,
-    Bumpy,
+
+    // (Polarity)
+    Bumpy(bool),
+}
+
+impl Edge {
+    fn polarity(&self) -> bool {
+        use Edge::*;
+
+        match self {
+            Bumpless => true,
+            Bumpy(polarity) => *polarity,
+        }
+    }
+
+    fn polarity_factor(&self) -> f32 {
+        if self.polarity() {
+            1.0
+        } else {
+            -1.0
+        }
+    }
 }
