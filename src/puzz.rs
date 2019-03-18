@@ -1,6 +1,6 @@
 use crate::geom::Point;
-use std::collections::{HashMap, HashSet};
 use std::cmp::{max, min};
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
 pub struct Puzzle {
@@ -12,7 +12,7 @@ pub struct Puzzle {
     vertices: Vec<Point>,
 
     // Map from vertex indices to edges.
-    edges: HashMap<(VertexIndex, VertexIndex), Edge>
+    edges: HashMap<(VertexIndex, VertexIndex), Edge>,
 }
 
 impl Puzzle {
@@ -33,9 +33,14 @@ impl Puzzle {
         puzzle.gen_vertices();
         puzzle.gen_edges();
 
-        assert_eq!((puzzle.x_pieces + 1) * (puzzle.y_pieces + 1), puzzle.vertices.len());
-        assert_eq!((puzzle.x_pieces + 1) * puzzle.y_pieces +
-            puzzle.x_pieces * (puzzle.y_pieces + 1), puzzle.edges.len());
+        assert_eq!(
+            (puzzle.x_pieces + 1) * (puzzle.y_pieces + 1),
+            puzzle.vertices.len()
+        );
+        assert_eq!(
+            (puzzle.x_pieces + 1) * puzzle.y_pieces + puzzle.x_pieces * (puzzle.y_pieces + 1),
+            puzzle.edges.len()
+        );
 
         puzzle
     }
@@ -53,7 +58,10 @@ impl Puzzle {
         for y in 0..self.y_pieces + 1 {
             for x in 0..self.x_pieces + 1 {
                 let vertex = Point::new(x as f32 * piece_width, y as f32 * piece_height);
-                debug_assert_eq!(self.vertices.len(), self.index_of_vertex(VertexIndex::new(y, x)));
+                debug_assert_eq!(
+                    self.vertices.len(),
+                    self.index_of_vertex(VertexIndex::new(y, x))
+                );
                 self.vertices.push(vertex);
             }
         }
@@ -74,9 +82,11 @@ impl Puzzle {
             let current = *todo.iter().next().unwrap();
             todo.remove(&current);
 
-            for neighbor in  self.neighbors(&current)
+            for neighbor in self
+                .neighbors(&current)
                 .into_iter()
-                .filter(|vi| !done.contains(vi)) {
+                .filter(|vi| !done.contains(vi))
+            {
                 todo.insert(neighbor);
                 self.add_edge(current, neighbor);
             }
@@ -90,7 +100,16 @@ impl Puzzle {
         let v1 = min(vi1, vi2);
         let v2 = max(vi1, vi2);
 
-        self.edges.insert((v1, v2), Edge::Bumpless);
+        let is_along_edge = self.is_edge_vertex(vi1) && self.is_edge_vertex(vi2);
+        let edge = match is_along_edge {
+            true => Edge::Bumpless,
+            false => Edge::Bumpy,
+        };
+        self.edges.insert((v1, v2), edge);
+    }
+
+    fn is_edge_vertex(&self, vi: VertexIndex) -> bool {
+        vi.row == 0 || vi.row == self.y_pieces || vi.col == 0 || vi.col == self.x_pieces
     }
 
     fn neighbors(&self, vi: &VertexIndex) -> Vec<VertexIndex> {
@@ -114,18 +133,24 @@ impl Puzzle {
         let mut svg = "".to_string();
 
         // TODO: consider using a templating engine instead of this mess.
-        write!(svg, r#"<svg xmlns="http://www.w3.org/2000/svg" version="1.0" "#);
+        write!(
+            svg,
+            r#"<svg xmlns="http://www.w3.org/2000/svg" version="1.0" "#
+        );
         write!(svg, r#"viewBox="0 0 {} {}" "#, self.x_mm, self.y_mm);
+        write!(svg, r#"style="margin: 1em;" "#);
         write!(svg, r#"width="{}mm" height="{}mm" "#, self.x_mm, self.y_mm);
         write!(svg, ">\n");
 
-        write!(svg, r#"<path fill="none" stroke="black" stroke-width="0.1" d=""#);
+        write!(
+            svg,
+            r#"<path fill="none" stroke="black" stroke-width="0.1" d=""#
+        );
 
         for ((vi1, vi2), e) in &self.edges {
             let v1 = &self.vertices[self.index_of_vertex(*vi1)];
             let v2 = &self.vertices[self.index_of_vertex(*vi2)];
-            write!(svg, r#"M {} {} L {} {}"#,
-                   v1.x(), v1.y(), v2.x(), v2.y());
+            write!(svg, "{}", self.edge_svg(v1, v2, &e));
             write!(svg, "\n");
         }
 
@@ -134,6 +159,14 @@ impl Puzzle {
         write!(svg, r#"</svg>"#);
 
         svg
+    }
+
+    fn edge_svg(&self, vi1: &Point, vi2: &Point, e: &Edge) -> String {
+        match e {
+            Edge::Bumpless =>  format!(r#"M {} {} L {} {}"#, vi1.x(), vi1.y(), vi2.x(), vi2.y()),
+            Edge::Bumpy => format!(r#"M {} {} L {} {}"#, vi1.x(), vi1.y(), vi2.x(), vi2.y()),
+        }
+
     }
 }
 
@@ -175,7 +208,7 @@ struct VertexIndex {
 
 impl VertexIndex {
     fn new(row: usize, col: usize) -> VertexIndex {
-        VertexIndex{ row, col }
+        VertexIndex { row, col }
     }
 }
 
