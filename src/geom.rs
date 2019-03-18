@@ -1,3 +1,5 @@
+use std::fmt::{self, Display, Formatter};
+
 pub struct Point {
     x: f32,
     y: f32,
@@ -14,5 +16,11 @@ impl Point {
 
     pub fn y(&self) -> f32 {
         self.y
+    }
+}
+
+impl Display for Point {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(f, "({}, {})", self.x, self.y)
     }
 }

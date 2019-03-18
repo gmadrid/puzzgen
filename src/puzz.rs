@@ -6,7 +6,7 @@ pub struct Puzzle {
     x_pieces: usize,
     y_pieces: usize,
 
-    vertices: Vec<Point>
+    vertices: Vec<Point>,
 }
 
 impl Puzzle {
@@ -34,7 +34,8 @@ impl Puzzle {
 
         for y in 0..self.y_pieces + 1 {
             for x in 0..self.x_pieces + 1 {
-                println!("X: {}", x);
+                let vertex = Point::new(x as f32 * piece_width, y as f32 * piece_height);
+                self.vertices.push(vertex);
             }
         }
     }
