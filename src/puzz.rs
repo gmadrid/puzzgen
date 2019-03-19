@@ -170,7 +170,6 @@ impl Puzzle {
                 let one_third_x = (vi2.x() - vi1.x()) / 3.0;
                 let one_third_y = (vi2.y() - vi1.y()) / 3.0;
                 let one_fifth_x = (vi2.y() - vi1.y()) / 5.0;
-                let one_fifth_y = (vi2.x() - vi1.x()) / 5.0;
                 if one_third_x == 0.0 {
                     // vertical
                     format!(
@@ -189,24 +188,28 @@ impl Puzzle {
                         vi2.y()
                     )
                 } else {
-                    format!(
-                        r#"M {} {} L {} {} L {} {} L {} {} L {} {} L {} {}"#,
-                        vi1.x(),
-                        vi1.y(),
-                        vi1.x() + one_third_x,
-                        vi1.y(),
-                        vi1.x() + one_third_x,
-                        vi1.y() + one_fifth_y * e.polarity_factor(),
-                        vi1.x() + 2.0 * one_third_x,
-                        vi1.y() + one_fifth_y * e.polarity_factor(),
-                        vi1.x() + 2.0 * one_third_x,
-                        vi1.y(),
-                        vi2.x(),
-                        vi2.y(),
-                    )
+                    self.bumpy_edge(vi1, vi2, e)
                 }
             }
         }
+    }
+
+    fn bumpy_edge(&self, vi1: &Point, vi2: &Point, _e: &Edge) -> String {
+        let width = vi2.x() - vi1.x();
+        let nubbin_width = width * 0.2;
+
+        let p0 = vi1;
+        let p1 = Point::new(vi1.x() + 0.2 * width, vi1.y() + 0.0);
+        let p2 = Point::new(vi1.x() + 0.5 * width, vi1.y() + -nubbin_width / 2.0);
+        let p3 = Point::new(vi1.x() + 0.5 * width - 0.5 * nubbin_width, vi1.y() + nubbin_width / 2.0);
+        let p5 = Point::new(vi1.x() + 0.5 * width + nubbin_width, vi1.y() + 1.5 * nubbin_width);
+        let p6 = Point::new(vi1.x() + 0.5 * width + 0.5 * nubbin_width, vi1.y() + nubbin_width / 2.0);
+        let p8 = Point::new(vi1.x() + 0.8 * width, vi1.y() + 0.0);
+        let p9 = vi2;
+
+        let d = |pt: &Point| { format!("{} {}", pt.x(), pt.y())};
+
+        format!("M {} C {} {} {} S {} {}  {} {}", d(p0), d(&p1), d(&p2), d(&p3), d(&p5), d(&p6), d(&p8), d(&p9))
     }
 }
 

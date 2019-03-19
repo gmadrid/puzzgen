@@ -2,8 +2,8 @@ use puzzgen::Puzzle;
 
 fn main() {
     let puzzle = Puzzle::builder()
-        .size(225.0, 150.0)
-        .pieces(12, 8)
+        .size(300.0, 200.0)
+        .pieces(15, 10)
         .build();
 
     // unwrap: making gross assumptions.
