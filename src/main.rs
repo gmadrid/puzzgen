@@ -6,7 +6,8 @@ fn main() {
         .pieces(12, 8)
         .build();
 
-    let svg = puzzle.to_svg();
+    // unwrap: making gross assumptions.
+    let svg = puzzle.to_svg().unwrap();
 
     println!("{}", svg);
 }

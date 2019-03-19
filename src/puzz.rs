@@ -2,7 +2,6 @@ use crate::geom::Point;
 use std::cmp::{max, min};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
-use rand::Rng;
 
 pub struct Puzzle {
     x_mm: f32,
@@ -52,7 +51,7 @@ impl Puzzle {
         vi.row * (self.x_pieces + 1) + vi.col
     }
 
-    fn gen_vertices<R>(&mut self, rng: &R) where R:rand::Rng {
+    fn gen_vertices<R>(&mut self, _rng: &R) where R:rand::Rng {
         assert!(self.vertices.is_empty());
 
         let piece_width = self.x_mm / self.x_pieces as f32;
@@ -132,36 +131,36 @@ impl Puzzle {
         neighbors
     }
 
-    pub fn to_svg(&self) -> String {
+    pub fn to_svg(&self) -> std::result::Result<String,std::fmt::Error> {
         let mut svg = "".to_string();
 
         // TODO: consider using a templating engine instead of this mess.
         write!(
             svg,
             r#"<svg xmlns="http://www.w3.org/2000/svg" version="1.0" "#
-        );
-        write!(svg, r#"viewBox="0 0 {} {}" "#, self.x_mm, self.y_mm);
-        write!(svg, r#"style="margin: 1em;" "#);
-        write!(svg, r#"width="{}mm" height="{}mm" "#, self.x_mm, self.y_mm);
-        write!(svg, ">\n");
+        )?;
+        write!(svg, r#"viewBox="0 0 {} {}" "#, self.x_mm, self.y_mm)?;
+        write!(svg, r#"style="margin: 1em;" "#)?;
+        write!(svg, r#"width="{}mm" height="{}mm" "#, self.x_mm, self.y_mm)?;
+        write!(svg, ">\n")?;
 
         write!(
             svg,
             r#"<path fill="none" stroke="black" stroke-width="0.1" d=""#
-        );
+        )?;
 
         for ((vi1, vi2), e) in &self.edges {
             let v1 = &self.vertices[self.index_of_vertex(*vi1)];
             let v2 = &self.vertices[self.index_of_vertex(*vi2)];
-            write!(svg, "{}", self.edge_svg(v1, v2, &e));
-            write!(svg, "\n");
+            write!(svg, "{}", self.edge_svg(v1, v2, &e))?;
+            write!(svg, "\n")?;
         }
 
-        write!(svg, r#""></path>"#);
-        write!(svg, "\n");
-        write!(svg, r#"</svg>"#);
+        write!(svg, r#""></path>"#)?;
+        write!(svg, "\n")?;
+        write!(svg, r#"</svg>"#)?;
 
-        svg
+        Ok(svg)
     }
 
     fn edge_svg(&self, vi1: &Point, vi2: &Point, e: &Edge) -> String {
@@ -206,7 +205,6 @@ impl Puzzle {
                         vi2.y(),
                     )
                 }
-                //                format!(r#"M {} {} L {} {}"#, vi1.x(), vi1.y(), vi2.x(), vi2.y())
             }
         }
     }
@@ -264,11 +262,9 @@ enum Edge {
 
 impl Edge {
     fn polarity(&self) -> bool {
-        use Edge::*;
-
         match self {
-            Bumpless => true,
-            Bumpy(polarity) => *polarity,
+            Edge::Bumpless => true,
+            Edge::Bumpy(polarity) => *polarity,
         }
     }
 
