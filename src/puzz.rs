@@ -178,9 +178,9 @@ impl Puzzle {
                         vi1.y(),
                         vi1.x(),
                         vi1.y() + one_third_y,
-                        vi1.x() + one_fifth_x * e.polarity_factor(),
+                        vi1.x() + one_fifth_x, // * e.polarity_factor(),
                         vi1.y() + one_third_y,
-                        vi1.x() + one_fifth_x * e.polarity_factor(),
+                        vi1.x() + one_fifth_x, // * e.polarity_factor(),
                         vi1.y() + 2.0 * one_third_y,
                         vi1.x(),
                         vi1.y() + 2.0 * one_third_y,
@@ -260,22 +260,51 @@ enum Edge {
     Bumpless,
 
     // (Polarity)
-    Bumpy(bool),
+    Bumpy(bool, EdgeDesc),
 }
 
 impl Edge {
-    fn polarity(&self) -> bool {
-        match self {
-            Edge::Bumpless => true,
-            Edge::Bumpy(polarity) => *polarity,
-        }
+    fn plain() -> Edge {
+        Edge::Bumpless
     }
 
-    fn polarity_factor(&self) -> f32 {
-        if self.polarity() {
-            1.0
-        } else {
-            -1.0
+    fn nubbin(polarity: bool) -> Edge {
+        Edge::Bumpy(polarity, EdgeDesc::unit_edge())
+    }
+//    fn polarity(&self) -> bool {
+//        match self {
+//            Edge::Bumpless => true,
+//            Edge::Bumpy(polarity) => *polarity,
+//        }
+//    }
+//
+//    fn polarity_factor(&self) -> f32 {
+//        if self.polarity() {
+//            1.0
+//        } else {
+//            -1.0
+//        }
+//    }
+}
+
+struct EdgeDesc {
+    nubbin_start: Point,
+    nubbin_end: Point,
+
+    pre_nubbin_control: Point,
+    under_nubbin_control: Point,
+    post_nubbin_control: Point,
+}
+
+impl EdgeDesc {
+    fn unit_edge() -> EdgeDesc {
+        EdgeDesc {
+            nubbin_start: Point::new(0.4, 0.1),
+            nubbin_end: Point::new(0.6, 0.1),
+
+            pre_nubbin_control: Point::new(0.2, 0.0),
+            under_nubbin_control: Point::new(0.5, -0.1),
+            post_nubbin_control: Point::new(0.8, 0.0),
         }
     }
 }
