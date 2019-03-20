@@ -1,6 +1,6 @@
 use crate::geom::Point;
 use std::cmp::{max, min};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Write;
 
 pub struct Puzzle {
@@ -75,7 +75,7 @@ impl Puzzle {
 
         let mut done: HashSet<VertexIndex> = HashSet::default();
 
-        // Seed the 'todo' list with the upper-left vertex.
+        // Seed the list with the upper-left vertex.
         let mut todo: HashSet<VertexIndex> = HashSet::default();
         todo.insert(VertexIndex::new(0, 0));
 
@@ -103,10 +103,14 @@ impl Puzzle {
         let v2 = max(vi1, vi2);
 
         let is_along_edge = self.is_edge_vertex(vi1) && self.is_edge_vertex(vi2);
-        let edge = match is_along_edge {
-            true => Edge::Bumpless,
-            false => Edge::Bumpy(rng.gen()),
+        let mut edge = match is_along_edge {
+            true => Edge::plain(),
+            false => Edge::nubbin(),
         };
+                     let start = &self.vertices[self.index_of_vertex(v1)];
+        let end = &self.vertices[self.index_of_vertex(v2)];
+
+        edge.transform(*start, *end);
         self.edges.insert((v1, v2), edge);
     }
 
@@ -152,7 +156,7 @@ impl Puzzle {
         for ((vi1, vi2), e) in &self.edges {
             let v1 = &self.vertices[self.index_of_vertex(*vi1)];
             let v2 = &self.vertices[self.index_of_vertex(*vi2)];
-            write!(svg, "{}", self.edge_svg(v1, v2, &e))?;
+            write!(svg, "{}", e.svg(*v1, *v2))?;
             write!(svg, "\n")?;
         }
 
@@ -163,54 +167,54 @@ impl Puzzle {
         Ok(svg)
     }
 
-    fn edge_svg(&self, vi1: &Point, vi2: &Point, e: &Edge) -> String {
-        match e {
-            Edge::Bumpless => format!(r#"M {} {} L {} {}"#, vi1.x(), vi1.y(), vi2.x(), vi2.y()),
-            Edge::Bumpy(_) => {
-                let one_third_x = (vi2.x() - vi1.x()) / 3.0;
-                let one_third_y = (vi2.y() - vi1.y()) / 3.0;
-                let one_fifth_x = (vi2.y() - vi1.y()) / 5.0;
-                if one_third_x == 0.0 {
-                    // vertical
-                    format!(
-                        r#"M {} {} L {} {} L {} {} L {} {} L {} {} L {} {}"#,
-                        vi1.x(),
-                        vi1.y(),
-                        vi1.x(),
-                        vi1.y() + one_third_y,
-                        vi1.x() + one_fifth_x, // * e.polarity_factor(),
-                        vi1.y() + one_third_y,
-                        vi1.x() + one_fifth_x, // * e.polarity_factor(),
-                        vi1.y() + 2.0 * one_third_y,
-                        vi1.x(),
-                        vi1.y() + 2.0 * one_third_y,
-                        vi2.x(),
-                        vi2.y()
-                    )
-                } else {
-                    self.bumpy_edge(vi1, vi2, e)
-                }
-            }
-        }
-    }
-
-    fn bumpy_edge(&self, vi1: &Point, vi2: &Point, _e: &Edge) -> String {
-        let width = vi2.x() - vi1.x();
-        let nubbin_width = width * 0.2;
-
-        let p0 = vi1;
-        let p1 = Point::new(vi1.x() + 0.2 * width, vi1.y() + 0.0);
-        let p2 = Point::new(vi1.x() + 0.5 * width, vi1.y() + -nubbin_width / 2.0);
-        let p3 = Point::new(vi1.x() + 0.5 * width - 0.5 * nubbin_width, vi1.y() + nubbin_width / 2.0);
-        let p5 = Point::new(vi1.x() + 0.5 * width + nubbin_width, vi1.y() + 1.5 * nubbin_width);
-        let p6 = Point::new(vi1.x() + 0.5 * width + 0.5 * nubbin_width, vi1.y() + nubbin_width / 2.0);
-        let p8 = Point::new(vi1.x() + 0.8 * width, vi1.y() + 0.0);
-        let p9 = vi2;
-
-        let d = |pt: &Point| { format!("{} {}", pt.x(), pt.y())};
-
-        format!("M {} C {} {} {} S {} {}  {} {}", d(p0), d(&p1), d(&p2), d(&p3), d(&p5), d(&p6), d(&p8), d(&p9))
-    }
+//    fn edge_svg(&self, vi1: &Point, vi2: &Point, e: &Edge) -> String {
+//        match e {
+//            Edge::Bumpless => format!(r#"M {} {} L {} {}"#, vi1.x(), vi1.y(), vi2.x(), vi2.y()),
+//            Edge::Bumpy(_) => {
+//                let one_third_x = (vi2.x() - vi1.x()) / 3.0;
+//                let one_third_y = (vi2.y() - vi1.y()) / 3.0;
+//                let one_fifth_x = (vi2.y() - vi1.y()) / 5.0;
+//                if one_third_x == 0.0 {
+//                    // vertical
+//                    format!(
+//                        r#"M {} {} L {} {} L {} {} L {} {} L {} {} L {} {}"#,
+//                        vi1.x(),
+//                        vi1.y(),
+//                        vi1.x(),
+//                        vi1.y() + one_third_y,
+//                        vi1.x() + one_fifth_x, // * e.polarity_factor(),
+//                        vi1.y() + one_third_y,
+//                        vi1.x() + one_fifth_x, // * e.polarity_factor(),
+//                        vi1.y() + 2.0 * one_third_y,
+//                        vi1.x(),
+//                        vi1.y() + 2.0 * one_third_y,
+//                        vi2.x(),
+//                        vi2.y()
+//                    )
+//                } else {
+//                    self.bumpy_edge(vi1, vi2, e)
+//                }
+//            }
+//        }
+//    }
+//
+//    fn bumpy_edge(&self, vi1: &Point, vi2: &Point, _e: &Edge) -> String {
+//        let width = vi2.x() - vi1.x();
+//        let nubbin_width = width * 0.2;
+//
+//        let p0 = vi1;
+//        let p1 = Point::new(vi1.x() + 0.2 * width, vi1.y() + 0.0);
+//        let p2 = Point::new(vi1.x() + 0.5 * width, vi1.y() + -nubbin_width / 2.0);
+//        let p3 = Point::new(vi1.x() + 0.5 * width - 0.5 * nubbin_width, vi1.y() + nubbin_width / 2.0);
+//        let p5 = Point::new(vi1.x() + 0.5 * width + nubbin_width, vi1.y() + 1.5 * nubbin_width);
+//        let p6 = Point::new(vi1.x() + 0.5 * width + 0.5 * nubbin_width, vi1.y() + nubbin_width / 2.0);
+//        let p8 = Point::new(vi1.x() + 0.8 * width, vi1.y() + 0.0);
+//        let p9 = vi2;
+//
+//        let d = |pt: &Point| { format!("{} {}", pt.x(), pt.y())};
+//
+//        format!("M {} C {} {} {} S {} {}  {} {}", d(p0), d(&p1), d(&p2), d(&p3), d(&p5), d(&p6), d(&p8), d(&p9))
+//    }
 }
 
 #[derive(Default)]
@@ -255,12 +259,12 @@ impl VertexIndex {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialOrd, PartialEq)]
 enum Edge {
     Bumpless,
 
     // (Polarity)
-    Bumpy(bool, EdgeDesc),
+    Bumpy(EdgeDesc),
 }
 
 impl Edge {
@@ -268,26 +272,60 @@ impl Edge {
         Edge::Bumpless
     }
 
-    fn nubbin(polarity: bool) -> Edge {
-        Edge::Bumpy(polarity, EdgeDesc::unit_edge())
+    fn nubbin() -> Edge {
+        Edge::Bumpy(EdgeDesc::unit_edge())
     }
-//    fn polarity(&self) -> bool {
-//        match self {
-//            Edge::Bumpless => true,
-//            Edge::Bumpy(polarity) => *polarity,
-//        }
-//    }
-//
-//    fn polarity_factor(&self) -> f32 {
-//        if self.polarity() {
-//            1.0
-//        } else {
-//            -1.0
-//        }
-//    }
+
+    fn transform(&mut self, start: Point, end: Point) {
+        match self {
+            Edge::Bumpless => {},
+            Edge::Bumpy(desc) => {
+                desc.nubbin_start = Edge::transform_point(desc.nubbin_start, start, end);
+                desc.nubbin_end = Edge::transform_point(desc.nubbin_end, start, end);
+                desc.pre_nubbin_control = Edge::transform_point(desc.pre_nubbin_control, start, end);
+                desc.post_nubbin_control = Edge::transform_point(desc.post_nubbin_control, start, end);
+                desc.under_nubbin_control = Edge::transform_point(desc.under_nubbin_control, start, end);
+            }
+        }
+    }
+
+    fn transform_point(pt: Point, start: Point, end: Point) -> Point {
+        let rise = dbg!(end.y() - start.y());
+        let run = dbg!(end.x() - start.x());
+        let theta = dbg!(rise.atan2(run));
+        dbg!(pt.scale(run, rise))
+            .rotate_by(theta)
+            .translate_to(start)
+    }
+
+    fn svg(&self, start: Point, end: Point) -> String {
+        let d = |pt: Point| { format!("{} {}", pt.x(), pt.y())};
+        match self {
+            Edge::Bumpless =>  {
+                format!("M {} L {} ", d(start), d(end))
+            }
+            Edge::Bumpy(desc) => {
+                format!("M {} C {} {} {} S {} {}  {} {} ",
+                        d(start),
+                        d(desc.pre_nubbin_control), d(desc.under_nubbin_control), d(desc.nubbin_start),
+                    d(desc.under_nubbin_control), d(desc.nubbin_end),
+                    d(desc.post_nubbin_control), d(end),
+                )
+            }
+        }
+    }
 }
 
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
+enum EdgePolarity {
+    Left,
+    Right,
+}
+
+#[derive(Debug, PartialOrd, PartialEq)]
 struct EdgeDesc {
+    polarity: EdgePolarity,
+
     nubbin_start: Point,
     nubbin_end: Point,
 
@@ -299,12 +337,62 @@ struct EdgeDesc {
 impl EdgeDesc {
     fn unit_edge() -> EdgeDesc {
         EdgeDesc {
+            polarity: EdgePolarity::Left,
+
+            // Along with the start/end points of the edge, these are the endpoints of the
+            // three beziers that make up the nubbin.
             nubbin_start: Point::new(0.4, 0.1),
             nubbin_end: Point::new(0.6, 0.1),
 
+            // Control points for the beziers that make up the nubbin.
             pre_nubbin_control: Point::new(0.2, 0.0),
             under_nubbin_control: Point::new(0.5, -0.1),
             post_nubbin_control: Point::new(0.8, 0.0),
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::f32::consts::PI;
+
+    #[test]
+    fn test_point_transform() {
+//        let pt = Point::new(1.0, 1.0);
+////        let start = Point::new(3.0, 2.0);
+////        let end = Point::new(3.0, 4.0);
+////        let new_pt = dbg!(Edge::transform_point(pt, start, end));
+//
+//        let pt_scaled = dbg!(pt.scale(2.0, 3.0));
+//        let pt_rotated = dbg!(pt.rotate_by(3.0 * PI / 2.0));
+//        dbg!(pt.rotate_by(3.0 * PI/4.0));
+//
+//        let pt_transformed = dbg!(pt.translate_to(Point::new(3.5, 2.3)));
+//
+//        assert!(false);
+////        assert_eq!(Point::new(32.0, 32.0), new_pt);
+
+        let pt = Point::new(1.0, 0.2);
+        let start = Point::new(0.0, 0.0);
+        let end = Point::new(0.0, 3.0);
+
+        let new_pt = Edge::transform_point(pt, start, end);
+        assert_eq!(Point::new(-0.6, 3.0), new_pt);
+    }
+
+//    #[test]
+//    fn test_edge_transform() {
+//        let mut edge = dbg!(Edge::nubbin());
+//
+//        let start = Point::new(1.0, 1.0);
+//        let end = Point::new(2.0, 3.0);
+//
+//        println!("START/END: {}/{}", start, end);
+//
+//        edge.transform(start, end);
+//        dbg!(edge);
+//
+//        assert!(false);
+//    }
 }
