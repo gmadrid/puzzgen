@@ -16,6 +16,8 @@ pub struct Puzzle {
 
     // Map from vertex indices to edges.
     edges: HashMap<(VertexIndex, VertexIndex), Edge>,
+
+    vertex_jitter: f32,
 }
 
 impl Puzzle {
@@ -31,11 +33,12 @@ impl Puzzle {
             y_pieces: builder.y_pieces,
             vertices: Vec::default(),
             edges: HashMap::default(),
+            vertex_jitter: builder.vertex_jitter,
         };
 
         let mut rng = rand::thread_rng();
 
-        puzzle.gen_vertices(&rng);
+        puzzle.gen_vertices(&mut rng);
         puzzle.gen_edges(&mut rng);
 
         assert_eq!(
@@ -54,7 +57,7 @@ impl Puzzle {
         vi.row * (self.x_pieces + 1) + vi.col
     }
 
-    fn gen_vertices<R>(&mut self, _rng: &R)
+    fn gen_vertices<R>(&mut self, rng: &mut R)
     where
         R: rand::Rng,
     {
@@ -62,14 +65,22 @@ impl Puzzle {
 
         let piece_width = self.x_mm / self.x_pieces as f32;
         let piece_height = self.y_mm / self.y_pieces as f32;
+        let min_dimen = piece_width.min(piece_height);
+        let vertex_jitter = min_dimen * self.vertex_jitter;
 
         for y in 0..self.y_pieces + 1 {
             for x in 0..self.x_pieces + 1 {
-                let vertex = pt!(x as f32 * piece_width, y as f32 * piece_height);
+                let mut vertex = pt!(x as f32 * piece_width, y as f32 * piece_height);
                 debug_assert_eq!(
                     self.vertices.len(),
                     self.index_of_vertex(VertexIndex::new(y, x))
                 );
+
+                if !(x == 0 || y == 0 || x == self.x_pieces || y == self.y_pieces)
+                    && vertex_jitter > 0.0
+                {
+                    vertex = vertex.jitter(vertex_jitter, rng);
+                }
                 self.vertices.push(vertex);
             }
         }
@@ -193,6 +204,8 @@ pub struct Builder {
     y_mm: f32,
     x_pieces: usize,
     y_pieces: usize,
+
+    vertex_jitter: f32,
 }
 
 impl Builder {
@@ -209,6 +222,11 @@ impl Builder {
     pub fn pieces(mut self, x: usize, y: usize) -> Builder {
         self.x_pieces = x;
         self.y_pieces = y;
+        self
+    }
+
+    pub fn vertex_jitter_pct(mut self, j: f32) -> Builder {
+        self.vertex_jitter = j / 100.0;
         self
     }
 
