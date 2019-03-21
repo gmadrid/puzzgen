@@ -49,13 +49,13 @@ impl Point {
     }
 
     pub fn translate_to(self, pt: Point) -> Point {
-        Point::new(self.x + pt.x(), self.y + pt.y())
+        pt!(self.x + pt.x(), self.y + pt.y())
     }
 
     pub fn rotate_by(self, radians: f32) -> Point {
-        Point::new(
+        pt!(
             self.x * radians.cos() - self.y * radians.sin(),
-            self.x * radians.sin() + self.y * radians.cos(),
+            self.x * radians.sin() + self.y * radians.cos()
         )
     }
 }

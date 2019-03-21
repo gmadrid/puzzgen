@@ -65,7 +65,7 @@ impl Puzzle {
 
         for y in 0..self.y_pieces + 1 {
             for x in 0..self.x_pieces + 1 {
-                let vertex = Point::new(x as f32 * piece_width, y as f32 * piece_height);
+                let vertex = pt!(x as f32 * piece_width, y as f32 * piece_height);
                 debug_assert_eq!(
                     self.vertices.len(),
                     self.index_of_vertex(VertexIndex::new(y, x))
@@ -320,16 +320,8 @@ impl Edge {
     }
 }
 
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq)]
-enum EdgePolarity {
-    Left,
-    Right,
-}
-
 #[derive(Debug, PartialEq)]
 struct EdgeDesc {
-    polarity: EdgePolarity,
-
     nubbin_start: Point,
     nubbin_end: Point,
 
@@ -342,8 +334,6 @@ struct EdgeDesc {
 impl EdgeDesc {
     fn unit_edge() -> EdgeDesc {
         EdgeDesc {
-            polarity: EdgePolarity::Left,
-
             // Along with the start/end points of the edge, these are the endpoints of the
             // three beziers that make up the nubbin.
             nubbin_start: pt!(0.4, 0.1),
