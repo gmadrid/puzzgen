@@ -2,6 +2,7 @@ use crate::geom::Point;
 use std::cmp::{max, min};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
+use rand::Rng;
 
 // BUG: horiz/vert nubbins are different sizes. :-(
 
@@ -118,10 +119,17 @@ impl Puzzle {
             true => Edge::plain(),
             false => Edge::nubbin(),
         };
+
+        edge.jitter(0.06, rng);
+
+        if rng.gen() {
+            edge.mirror_x();
+        }
+
         let start = &self.vertices[self.index_of_vertex(v1)];
         let end = &self.vertices[self.index_of_vertex(v2)];
-
         edge.transform(*start, *end);
+
         self.edges.insert((v1, v2), edge);
     }
 
@@ -236,6 +244,34 @@ impl Edge {
 
     fn nubbin() -> Edge {
         Edge::Bumpy(EdgeDesc::unit_edge())
+    }
+
+    fn mirror_x(&mut self) {
+        match self {
+            Edge::Bumpless => {},
+            Edge::Bumpy(desc) => {
+                desc.nubbin_start = desc.nubbin_start.mirror_x();
+                desc.nubbin_end = desc.nubbin_end.mirror_x();
+                desc.start_control = desc.start_control.mirror_x();
+                desc.end_control = desc.end_control.mirror_x();
+                desc.left_nubbin_control = desc.left_nubbin_control.mirror_x();
+                desc.right_nubbin_control = desc.right_nubbin_control.mirror_x();
+            }
+        }
+    }
+
+    fn jitter<R>(&mut self, max: f32, rng: &mut R) where R: Rng {
+        match self {
+            Edge::Bumpless => {},
+            Edge::Bumpy(desc) => {
+                desc.nubbin_start = desc.nubbin_start.jitter(max / 2.0, rng);
+                desc.nubbin_end = desc.nubbin_end.jitter(max / 2.0, rng);
+                desc.start_control = desc.start_control.jitter(max, rng);
+                desc.end_control = desc.end_control.jitter(max, rng);
+                desc.left_nubbin_control = desc.left_nubbin_control.jitter(max, rng);
+                desc.right_nubbin_control = desc.right_nubbin_control.jitter(max, rng);
+            }
+        }
     }
 
     fn transform(&mut self, start: Point, end: Point) {

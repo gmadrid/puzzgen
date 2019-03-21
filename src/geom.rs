@@ -1,4 +1,5 @@
 use std::fmt::{self, Display, Formatter};
+use rand::Rng;
 
 #[macro_export]
 macro_rules! pt {
@@ -28,6 +29,16 @@ impl Point {
 
     pub fn dist(self, other: Point) -> f32 {
         ((self.y - other.y).powf(2.0) + (self.x - other.x).powf(2.0)).sqrt()
+    }
+
+    pub fn jitter<R>(self, max: f32, rng: &mut R) -> Point where R: Rng {
+        let delta_x = rng.gen_range(-max, max);
+        let delta_y = rng.gen_range(-max, max);
+        pt!(self.x + delta_x, self.y + delta_y)
+    }
+
+    pub fn mirror_x(self) -> Point {
+        pt!(self.x, -self.y)
     }
 
     pub fn scale(self, x_factor: f32, y_factor: f32) -> Point {
