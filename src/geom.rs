@@ -1,5 +1,5 @@
-use std::fmt::{self, Display, Formatter};
 use rand::Rng;
+use std::fmt::{self, Display, Formatter};
 
 #[macro_export]
 macro_rules! pt {
@@ -31,7 +31,10 @@ impl Point {
         ((self.y - other.y).powf(2.0) + (self.x - other.x).powf(2.0)).sqrt()
     }
 
-    pub fn jitter<R>(self, max: f32, rng: &mut R) -> Point where R: Rng {
+    pub fn jitter<R>(self, max: f32, rng: &mut R) -> Point
+    where
+        R: Rng,
+    {
         let delta_x = rng.gen_range(-max, max);
         let delta_y = rng.gen_range(-max, max);
         pt!(self.x + delta_x, self.y + delta_y)

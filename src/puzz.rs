@@ -1,8 +1,8 @@
 use crate::geom::Point;
+use rand::Rng;
 use std::cmp::{max, min};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
-use rand::Rng;
 
 // BUG: horiz/vert nubbins are different sizes. :-(
 
@@ -248,7 +248,7 @@ impl Edge {
 
     fn mirror_x(&mut self) {
         match self {
-            Edge::Bumpless => {},
+            Edge::Bumpless => {}
             Edge::Bumpy(desc) => {
                 desc.nubbin_start = desc.nubbin_start.mirror_x();
                 desc.nubbin_end = desc.nubbin_end.mirror_x();
@@ -260,9 +260,12 @@ impl Edge {
         }
     }
 
-    fn jitter<R>(&mut self, max: f32, rng: &mut R) where R: Rng {
+    fn jitter<R>(&mut self, max: f32, rng: &mut R)
+    where
+        R: Rng,
+    {
         match self {
-            Edge::Bumpless => {},
+            Edge::Bumpless => {}
             Edge::Bumpy(desc) => {
                 desc.nubbin_start = desc.nubbin_start.jitter(max / 2.0, rng);
                 desc.nubbin_end = desc.nubbin_end.jitter(max / 2.0, rng);
@@ -280,14 +283,12 @@ impl Edge {
             Edge::Bumpy(desc) => {
                 desc.nubbin_start = Edge::transform_point(desc.nubbin_start, start, end);
                 desc.nubbin_end = Edge::transform_point(desc.nubbin_end, start, end);
-                desc.start_control =
-                    Edge::transform_point(desc.start_control, start, end);
+                desc.start_control = Edge::transform_point(desc.start_control, start, end);
                 desc.left_nubbin_control =
                     Edge::transform_point(desc.left_nubbin_control, start, end);
                 desc.right_nubbin_control =
                     Edge::transform_point(desc.right_nubbin_control, start, end);
-                desc.end_control =
-                    Edge::transform_point(desc.end_control, start, end);
+                desc.end_control = Edge::transform_point(desc.end_control, start, end);
             }
         }
     }
@@ -307,12 +308,12 @@ impl Edge {
             Edge::Bumpy(desc) => format!(
                 "M {} C {} {} {} S {} {}  {} {} ",
                 d(start),
-                d(desc.start_control),  // p1
-                d(desc.left_nubbin_control),// p2
-                d(desc.nubbin_start),        // p3
-                d(desc.right_nubbin_control),// p5
-                d(desc.nubbin_end),          // p6
-                d(desc.end_control), // p8
+                d(desc.start_control),        // p1
+                d(desc.left_nubbin_control),  // p2
+                d(desc.nubbin_start),         // p3
+                d(desc.right_nubbin_control), // p5
+                d(desc.nubbin_end),           // p6
+                d(desc.end_control),          // p8
                 d(end),
             ),
         }
